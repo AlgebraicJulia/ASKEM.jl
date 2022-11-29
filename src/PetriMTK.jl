@@ -33,4 +33,10 @@ function rate_equation(p::AbstractPetriNet; name)
   ODESystem(eqs, t, S, r; name)
 end
 
+# Next steps:
+#
+# The rates should be state variables too. Policies are then implemented via the event system.
+# We can evaluate whether certain observables stay below a certain threshold using the event system
+# as well.
+
 end
