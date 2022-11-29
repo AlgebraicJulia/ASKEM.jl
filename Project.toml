@@ -3,6 +3,15 @@ uuid = "249ca1cb-608a-4564-b30a-3ad6c669bf0d"
 authors = ["AlgebraicJulia team"]
 version = "0.1.0"
 
+[deps]
+AlgebraicDynamics = "5fd6ff03-a254-427e-8840-ba658f502e32"
+AlgebraicPetri = "4f99eebe-17bf-4e98-b6a1-2c4f205a959b"
+Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
+ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+
 [compat]
 julia = "1.8"
 
