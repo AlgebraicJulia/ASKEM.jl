@@ -19,7 +19,7 @@ function rate_equation(p::AbstractPetriNet; name)
     Symbol("r", map_subscripts(i))
   end
   S = [first(@variables $Si(t)) for Si in sname′.(1:ns(p))]
-  r = [first(@parameters $ri(t)) for ri in tname′.(1:nt(p))]
+  r = [first(@variables $ri(t)) for ri in tname′.(1:nt(p))]
   D = Differential(t)
 
   tm = TransitionMatrices(p)
@@ -28,9 +28,11 @@ function rate_equation(p::AbstractPetriNet; name)
 
   transition_rates = [r[tr] * prod(S[s]^tm.input[tr,s] for s in 1:ns(p)) for tr in 1:nt(p)]
 
-  eqs = [D(S[s]) ~ transition_rates' * coefficients[:,s] for s in 1:ns(p)]
+  concentration_eqs = [D(S[s]) ~ transition_rates' * coefficients[:,s] for s in 1:ns(p)]
+  rate_eqs = [D(r[tr]) ~ 0.0 for tr in 1:nt(p)]
+  eqs = [concentration_eqs; rate_eqs]
 
-  ODESystem(eqs, t, S, r; name)
+  ODESystem(eqs, t, [S; r], []; name)
 end
 
 # Next steps:
