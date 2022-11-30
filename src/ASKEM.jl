@@ -2,7 +2,11 @@ module ASKEM
 
 using Reexport
 
-# Write your package code here.
-@reexport include("PetriMTK.jl")
+include("PetriMTK.jl")
+include("Interactions.jl")
+
+
+@reexport using .PetriMTK
+@reexport using ..Interactions
 
 end
