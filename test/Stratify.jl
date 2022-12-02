@@ -33,6 +33,17 @@ res2 = stratify_except(SIRD_typed=>[4=>[:strata]],
 
 @test is_isomorphic(res, res2)
 
+
+# Age strata
+
 @test nt(age_strata(2)) == 5
+
+Graph(res)
+
+typed_age = homomorphisms(age_strata(2), 
+                         strip_names(infectious_ontology); 
+                         initial=(T=[2,2],),
+                         type_components=(Name=_->nothing,))
+stratify(typed_res, typed_age)
 
 end # module
