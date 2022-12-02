@@ -6,6 +6,7 @@ include("PetriMTK.jl")
 include("Interactions.jl")
 include("Stratify.jl")
 include("Ontologies.jl")
+include("semagrams/Semagrams.jl")
 
 @reexport using .PetriMTK
 @reexport using .Interactions
