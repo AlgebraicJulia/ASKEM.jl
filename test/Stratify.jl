@@ -29,7 +29,8 @@ res = stratify(SIRD_typed=>[[:strata],[:strata],[:strata],[]], # S I R D
                infectious_ontology)
 
 res2 = stratify_except(SIRD_typed=>[4=>[:strata]], 
-                       Quarantine_typed=>[1=>[:infect]], infectious_ontology)
+                       Quarantine_typed=>[1=>[:infect]], 
+                       infectious_ontology)
 
 @test is_isomorphic(res, res2)
 

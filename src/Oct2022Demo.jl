@@ -1,6 +1,6 @@
 module Oct2022Demo
 
-export typed_stratify, simulate, calibrate, MakeReactionSystem, generate_data, 
+export stratify_with_obs_function, simulate, calibrate, MakeReactionSystem, generate_data, 
        get_infected_states, get_susceptible_states,
        get_recovered_states, optimise_p, full_train, obs_SIRD, 
        makeLossFunction, plot_obs_w_ests, full_train_rand
@@ -16,118 +16,8 @@ using JSON
 using CSV
 using DataFrames
 
-#=
-THESE ARE STRATIFY FUNCTIONS FROM Structured-Epidemic-Modeling
-stratify(typed_model1, typed_model2) = ob(pullback(typed_model1, typed_model2))
+using ..Stratify # StrataSpec
 
-typed_stratify(typed_model1, typed_model2) =
-  compose(proj1(pullback(typed_model1, typed_model2)), typed_model1);
-=#
-
-abstract type AbstractStrataSpec end
-
-struct StrataSpec <: AbstractStrataSpec
-  tpn::ACSetTransformation
-  tlist::Vector{Vector{Symbol}}
-end
-
-"""Modify a typed petri net to add cross terms"""
-#=function add_cross_terms(pn_crossterms, type_system)
-
-  typed_pn, crossterms = deepcopy.(pn_crossterms)
-  pn = dom(typed_pn)
-  type_comps = Dict([k=>collect(v) for (k,v) in pairs(components(typed_pn))])
-  for (s_i,cts) in enumerate(crossterms)
-    for ct in cts 
-      type_ind = findfirst(==(ct), type_system[:tname])
-      is, os = [incident(type_system, type_ind, f) for f in [:it, :ot]]
-      new_t = add_part!(pn, :T; tname=ct)
-      add_parts!(pn, :I, length(is); is=s_i, it=new_t)
-      add_parts!(pn, :O, length(os); os=s_i, ot=new_t)
-      push!(type_comps[:T], type_ind)
-      append!(type_comps[:I], is); append!(type_comps[:O], os); 
-    end
-  end
-  return homomorphism(pn, codom(typed_pn); initial=type_comps, 
-                        type_components=(Name=x->nothing,),)
-end
-
-function add_cross_terms(ss::StrataSpec, type_system)
-  return add_cross_terms(ss.tpn=>ss.tlist, type_system)
-end=#
-
-function add_cross_terms!(ss::StrataSpec, type_system)
-  typed_pn = ss.tpn
-  crossterms = ss.tlist
-  pn = dom(typed_pn)
-  type_comps = Dict([k=>collect(v) for (k,v) in pairs(components(typed_pn))])
-  for (s_i,cts) in enumerate(crossterms)
-    for ct in cts 
-      type_ind = findfirst(==(ct), type_system[:tname])
-      is, os = [incident(type_system, type_ind, f) for f in [:it, :ot]]
-      new_t = add_part!(pn, :T; tname=ct)
-      add_parts!(pn, :I, length(is); is=s_i, it=new_t)
-      add_parts!(pn, :O, length(os); os=s_i, ot=new_t)
-      push!(type_comps[:T], type_ind)
-      append!(type_comps[:I], is); append!(type_comps[:O], os); 
-    end
-  end
-  return homomorphism(pn, codom(typed_pn); initial=type_comps, 
-                        type_components=(Name=x->nothing,),)
-end
-
-function add_cross_terms(ss::StrataSpec, type_system)
-  typed_pn = deepcopy(ss.tpn)
-  crossterms = deepcopy(ss.tlist)
-  pn = dom(typed_pn)
-  type_comps = Dict([k=>collect(v) for (k,v) in pairs(components(typed_pn))])
-  for (s_i,cts) in enumerate(crossterms)
-    for ct in cts 
-      type_ind = findfirst(==(ct), type_system[:tname])
-      is, os = [incident(type_system, type_ind, f) for f in [:it, :ot]]
-      new_t = add_part!(pn, :T; tname=ct)
-      add_parts!(pn, :I, length(is); is=s_i, it=new_t)
-      add_parts!(pn, :O, length(os); os=s_i, ot=new_t)
-      push!(type_comps[:T], type_ind)
-      append!(type_comps[:I], is); append!(type_comps[:O], os); 
-    end
-  end
-  return homomorphism(pn, codom(typed_pn); initial=type_comps, 
-                        type_components=(Name=x->nothing,),)
-end
-  
-function add_cross_terms_with_rates(ss::StrataSpec, type_system)
-  typed_pn = deepcopy(ss.tpn)
-  crossterms = deepcopy(ss.tlist)
-  pn = dom(typed_pn)
-  type_comps = Dict([k=>collect(v) for (k,v) in pairs(components(typed_pn))])
-  for (s_i,cts) in enumerate(crossterms)
-    for ct in cts 
-      type_ind = findfirst(==(ct), type_system[:tname])
-      is, os = [incident(type_system, type_ind, f) for f in [:it, :ot]]
-      new_t = isa(pn, LabelledReactionNet) ? add_part!(pn, :T; tname=ct, rate=1.0) : add_part!(pn, :T; tname=ct)
-      add_parts!(pn, :I, length(is); is=s_i, it=new_t)
-      add_parts!(pn, :O, length(os); os=s_i, ot=new_t)
-      push!(type_comps[:T], type_ind)
-      append!(type_comps[:I], is); append!(type_comps[:O], os); 
-    end
-  end
-  return homomorphism(pn, codom(typed_pn); initial=type_comps, 
-                        type_components=(Name=x->nothing,Rate=x->nothing, Concentration=x->nothing),)
-end
-
-"""Add cross terms before taking pullback"""
-function stratify_span(ss1, ss2, type_system)
-  #type_system = codom(ss1.tpn)
-  pb = Catlab.CategoricalAlgebra.pullback(add_cross_terms(ss1,type_system), add_cross_terms(ss2, type_system))
-  return pb
-end
-
-stratify(ss1, ss2, type_system) = begin
-  pb = stratify_span(ss1,ss2,type_system)
-  f = proj1(pb)
-  return apex(pb), makeObsFunction(f)
-end
 
 counter(a) = [count(==(i),a) for i in unique(a)]
 function MakeReactionSystem(pn::AbstractPetriNet)
@@ -189,7 +79,7 @@ end
 
 function pushforwardObs(f::ACSetTransformation,sol,sample_times)
   
-  state_samples = sol(sample_times)
+  state_samples = sol(sample_times) # WARNING THIS VARIABLE IS UNUSED
   obs_samples = []
   for ii in 1:ns(codom(f))
     tmp = sol(sample_times)[state_preimage(f, ii),:]
@@ -203,6 +93,12 @@ function makeObsFunction(f::ACSetTransformation)
   return (sol, sample_times) -> pushforwardObs(f, sol, sample_times)
 end
 
+
+function stratify_with_obs_function(ss1, ss2, type_system)
+  pb = stratify_span(ss1,ss2,type_system)
+  f = first(legs(pb)) # proj1 not defined on this type
+  return apex(pb), makeObsFunction(f)
+end
 
 function generateData(model::AbstractLabelledPetriNet, p, u0, tspan, num_samples, obs_func)
     sample_times = range(tspan[1], stop=tspan[2], length=num_samples)
@@ -293,27 +189,6 @@ function plot_obs_w_ests(sample_times, sample_data, sol, obs_func)
   obs_ests, obs_lbls = obs_func(sol, sample_times)
   plot(sample_times, sample_data, seriestype=:scatter,label="")
   plot!(sample_times,obs_ests, lw=2, label=reshape(map(String,obs_lbls),(1, length(obs_lbls))))
-end
-
-function load_mira(fname)
-  mdl_orig_mira = read_json_acset(OrigMIRANet{Any,Any,Any,Any,Any,Any}, fname)
-  mdl_orig_mira[:sname] .= Symbol.(mdl_orig_mira[:sname])
-  mdl_orig_mira[:tname] .= Symbol.(mdl_orig_mira[:tname])
-  mdl_orig = LabelledPetriNet(mdl_orig_mira);
-  return mdl_orig
-end
-
-function load_mira_curated(fname, fillrate=1.0)
-  mdl_disease_mira = read_json_acset(MIRANet{Any,Any,Any,Any,Any,Any}, fname)
-  input_rates = deepcopy(mdl_disease_mira[:rate])
-	min_rate = minimum(input_rates[map(!isnothing,input_rates)])
-  filled_rates = input_rates
-  filled_rates[map(isnothing,input_rates)] = repeat([fillrate],sum(map(isnothing,input_rates)))
-  mdl_disease_mira[:rate] = filled_rates
-  mdl_disease_mira[:concentration] = 0.0
-  mdl_disease_mira[:sname] .= Symbol.(mdl_disease_mira[:sname])
-  mdl_disease_mira[:tname] .= Symbol.(mdl_disease_mira[:tname])
-  return mdl_disease_mira
 end
 
  
