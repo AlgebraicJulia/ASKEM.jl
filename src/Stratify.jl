@@ -36,8 +36,8 @@ species, which transitions in the *other* model you want that species to have.
 
 For example, in stratifying a SIRD model with a Quarantine model, the args would 
 be:
-SIRD_typed=>[[:strata],[:strata],[:strata],[]],     # note: order is S I R D
-Quarantine_typed=>[[:disease], [:disease,:infect]], # note: order is Q NQ 
+SIRD       => [[:strata],[:strata],[:strata],[]],# note: order is S I R D
+Quarantine => [[:disease], [:disease,:infect]],  # note: order is Q NQ 
 
 This says that S,I,R can partake in strata-changing transitions (as defined in 
 the Quarantine model) and Q,NQ can change disease state while only NQ can 
@@ -49,6 +49,17 @@ function stratify(pn1, pn2, type_system)
   pullback([add_cross_terms(pn, type_system) for pn in [pn1, pn2]]) |> apex
 end
 
+"""
+An alternative way of calling `stratify` which assumes the maximal amount of 
+stratification and one has to only specify which transitions you *don't* want.
+
+The example in the docstring of `stratify` is equivalently specified by this 
+function with the arguments:
+
+SIRD       => [4=>[:strata]] # note species 4 represents dead agents
+Quarantine => [1=>[:infect]  # note species 1 represents quarantined agents
+
+"""
 function stratify_except(pn1, pn2, type_system)
   cross1, cross2 = map([pn1=>pn2,pn2=>pn1]) do (pn, other) 
     map(parts(dom(pn[1]),:S)) do s 
@@ -100,9 +111,11 @@ Create a petri net with `n` species, a unary transition on each, and a binary
 transition for each (unordered) pair of species.
 """
 function age_strata(n::Int)
-  res = oplus(fill(terminal(PetriNet) |> apex, n))
-  for ij in filter(ij-> ij[1] <= ij[2], collect(Iterators.product(1:n, 1:n)))
-    t = add_part!(res, :T)
+  res = oplus(fill(terminal(LabelledPetriNet) |> apex, n))
+  res = map(res; Name = _ -> :P)
+  res[:, :tname] = :disease
+  for ij in filter(((i,j),) -> i <= j, collect(Iterators.product(1:n, 1:n)))
+    t = add_part!(res, :T; tname=:inf)
     add_parts!(res, :I, 2; it=t, is=ij); add_parts!(res, :O, 2; ot=t, os=ij)
   end
   return res
