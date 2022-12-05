@@ -26,6 +26,7 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 [compat]
 AlgebraicDynamics = "0.1"
 AlgebraicPetri = "0.8"
+Catalyst = "12"
 Catlab = "0.14"
 DifferentialEquations = "7"
 HypertextLiteral = "0.9"
